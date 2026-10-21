@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-inegi"
+version = "0.1.0"
+description = "Servidor MCP para consultar indicadores oficiales del INEGI: población, inflación (INPC), empleo, PIB e IGAE, a nivel nacional, estatal y municipal"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Inaki Sobera", email = "inakisobera8@gmail.com"}
+]
+keywords = [
+    "mcp",
+    "mcp-server",
+    "inegi",
+    "mexico",
+    "datos-abiertos",
+    "inflacion",
+    "inpc",
+    "pib",
+    "censo",
+    "ai-agents",
+    "claude-desktop",
+    "itzamna",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+dependencies = [
+    "mcp>=1.2.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1",
+]
+
+[project.scripts]
+mcp-inegi = "mcp_inegi.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/itzamna-mx/mcp-inegi"
+Repository = "https://github.com/itzamna-mx/mcp-inegi"
+Issues = "https://github.com/itzamna-mx/mcp-inegi/issues"
+
+[tool.setuptools.packages.find]
+include = ["mcp_inegi*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
