@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import unicodedata
 from importlib.metadata import PackageNotFoundError, version
 
 try:  # instalado normalmente
@@ -61,67 +60,6 @@ ESTADOS = {
     "31": "Yucatán",
     "32": "Zacatecas",
 }
-
-# Nombres comunes que no coinciden con el nombre oficial.
-_ALIAS_ESTADOS = {
-    "nacional": "00",
-    "mexico": "00",
-    "republica mexicana": "00",
-    "estados unidos mexicanos": "00",
-    "cdmx": "09",
-    "df": "09",
-    "distrito federal": "09",
-    "edomex": "15",
-    "estado de mexico": "15",
-    "coahuila": "05",
-    "michoacan": "16",
-    "veracruz": "30",
-    "queretaro de arteaga": "22",
-    "nl": "19",
-    "bc": "02",
-    "bcs": "03",
-}
-
-
-def _normalizar(texto: str) -> str:
-    sin_acentos = unicodedata.normalize("NFD", texto)
-    sin_acentos = "".join(c for c in sin_acentos if unicodedata.category(c) != "Mn")
-    return " ".join(sin_acentos.lower().split())
-
-
-_POR_NOMBRE = {_normalizar(nombre): clave for clave, nombre in ESTADOS.items()}
-_POR_NOMBRE.update(_ALIAS_ESTADOS)
-
-
-def resolver_area(area: str | None) -> str:
-    """Convierte un nombre o clave de área geográfica a la clave que espera la API.
-
-    Acepta "00"/"nacional", la clave de estado con o sin cero ("9" o "09"), el nombre del
-    estado ("Jalisco", "CDMX", "Edomex") o la clave de municipio de 5 dígitos ("15057").
-    Nota: "México" a secas se toma como el país; el estado es "Estado de México" o "15".
-    """
-    if area is None or not str(area).strip():
-        return AREA_NACIONAL
-    texto = str(area).strip()
-    if texto.isdigit():
-        if len(texto) <= 2:
-            clave = texto.zfill(2)
-            if clave == AREA_NACIONAL or clave in ESTADOS:
-                return clave
-        elif len(texto) == 5 and texto[:2] in ESTADOS:
-            return texto
-        raise ValueError(
-            f"Clave de área '{texto}' no válida. Usa '00' (nacional), 2 dígitos para estado "
-            "(p. ej. '09') o 5 dígitos para municipio (estado + municipio, p. ej. '15057')."
-        )
-    clave = _POR_NOMBRE.get(_normalizar(texto))
-    if clave is None:
-        raise ValueError(
-            f"No reconozco el área '{texto}'. Usa el nombre de un estado o su clave numérica; "
-            "para municipios usa la clave de 5 dígitos (estado + municipio, p. ej. '15057')."
-        )
-    return clave
-
 
 # Indicadores verificados contra la API (octubre de 2026). Los IDs de 10 dígitos son del
 # BISE (sociodemográfico); los de 6, del BIE (económico).

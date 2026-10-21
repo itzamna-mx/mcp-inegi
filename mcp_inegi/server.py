@@ -10,11 +10,15 @@ try:
 except ImportError:  # pragma: no cover
     from mcp.server.fastmcp import FastMCP as MCPServer
 
+from .areas import buscar_municipios
 from .client import InegiAPIError, InegiClient
 from .constants import ESTADOS, INDICADORES, PACKAGE_VERSION
 
 #: Máximo de áreas por comparación: cada una es una consulta a la API.
 MAX_AREAS = 33
+
+#: Tope de municipios en una búsqueda (un texto muy corto puede coincidir con cientos).
+MAX_MUNICIPIOS = 50
 
 
 def _json(datos: object) -> str:
@@ -81,7 +85,7 @@ def create_server(token: str | None = None) -> MCPServer:
                 ID numérico del INEGI (p. ej. '910406').
             area: Área geográfica (opcional, por defecto nacional). Acepta el nombre del estado
                 ('Jalisco', 'CDMX', 'Estado de México'), su clave de 2 dígitos ('14') o la
-                clave de municipio de 5 dígitos ('15057' = Naucalpan).
+                nombre o clave de un municipio ('Naucalpan', 'Benito Juárez, CDMX', '15057').
             observaciones: Cuántos periodos devolver, del más reciente hacia atrás (1 a 120).
         """
         try:
@@ -137,6 +141,30 @@ def create_server(token: str | None = None) -> MCPServer:
                 "fuente": meta["fuente"],
                 "ultima_actualizacion": meta["ultima_actualizacion"],
                 "resultados": validas + errores,
+            }
+        )
+
+    @server.tool()
+    async def buscar_municipio(nombre: str, estado: str | None = None) -> str:
+        """Busca la clave geoestadística (5 dígitos) de un municipio o alcaldía por su nombre.
+
+        Úsala cuando un nombre sea ambiguo o para confirmar la clave antes de consultar.
+
+        Args:
+            nombre: Nombre completo o parcial, sin importar acentos ('naucalpan', 'Juárez').
+            estado: Estado para acotar la búsqueda (opcional), p. ej. 'Chihuahua' o '08'.
+        """
+        try:
+            encontrados = buscar_municipios(nombre, estado)
+        except ValueError as e:
+            return f"Error: {e}"
+        return _json(
+            {
+                "busqueda": nombre,
+                "estado": estado,
+                "total": len(encontrados),
+                "municipios": encontrados[:MAX_MUNICIPIOS],
+                "fuente": "INEGI, Marco Geoestadístico (catálogo de municipios)",
             }
         )
 

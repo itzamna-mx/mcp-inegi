@@ -24,12 +24,14 @@ Cada respuesta trae el ID del indicador, el periodo, la unidad, la fuente oficia
 | `indicadores_clave` | Catálogo de indicadores verificados, con su ID y cobertura geográfica |
 | `consultar_indicador` | Último valor o serie de un indicador para el país, un estado o un municipio |
 | `comparar_areas` | El mismo indicador en varios estados o municipios, ordenado de mayor a menor |
+| `buscar_municipio` | Clave de un municipio o alcaldía por nombre, sin importar acentos |
 | `metadatos_indicador` | Nombre oficial, unidad, frecuencia, fuente y periodo cubierto |
 
 `consultar_indicador` acepta las claves del catálogo (`INFLACION_ANUAL`, `POBLACION_TOTAL`,
 `TASA_DESOCUPACION`, `PIB_REAL`, `IGAE`…) o cualquier ID numérico del Banco de Indicadores.
-Las áreas se pueden dar por nombre (`Jalisco`, `CDMX`, `Estado de México`) o por clave
-(`14`, `09`, `15057`).
+Las áreas se pueden dar por nombre o por clave: estados (`Jalisco`, `CDMX`, `14`) y los 2,478
+municipios y alcaldías (`Naucalpan`, `Juárez, Chihuahua`, `15057`). Si un nombre existe en varios
+estados, como Benito Juárez, el servidor devuelve los candidatos en lugar de adivinar.
 
 ## Instalación
 
@@ -79,6 +81,8 @@ Cosas que descubrimos al construirlo (octubre de 2026) y que el servidor ya resu
 - Se pide siempre la serie completa: con `reciente=true` la API falla en municipios cuando el
   periodo nacional más nuevo (p. ej. 2025) no existe a ese nivel.
 - El token va en la URL, así que el servidor silencia los logs de `httpx` para no filtrarlo.
+- El catálogo de municipios viene incluido en el paquete (`scripts/generar_municipios.py` lo
+  regenera desde el Marco Geoestadístico).
 - Las respuestas se guardan en caché una hora (`INEGI_CACHE_TTL`, en segundos).
 
 ## Desarrollo

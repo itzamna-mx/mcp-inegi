@@ -63,6 +63,9 @@ Issues = "https://github.com/itzamna-mx/mcp-inegi/issues"
 [tool.setuptools.packages.find]
 include = ["mcp_inegi*"]
 
+[tool.setuptools.package-data]
+mcp_inegi = ["data/*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

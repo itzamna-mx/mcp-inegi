@@ -27,6 +27,7 @@ async def test_tools_registradas(server):
         "consultar_indicador",
         "comparar_areas",
         "metadatos_indicador",
+        "buscar_municipio",
     }
 
 
@@ -75,3 +76,30 @@ async def test_comparar_areas_limite(server):
         )
     )
     assert texto.startswith("Error")
+
+
+async def test_buscar_municipio(server):
+    datos = json.loads(
+        _texto(await server.call_tool("buscar_municipio", {"nombre": "benito juarez"}))
+    )
+    assert datos["total"] > 5
+    datos = json.loads(
+        _texto(
+            await server.call_tool(
+                "buscar_municipio", {"nombre": "benito juarez", "estado": "Quintana Roo"}
+            )
+        )
+    )
+    assert [m["clave"] for m in datos["municipios"]] == ["23005"]
+
+
+async def test_consultar_por_nombre_de_municipio(server):
+    datos = json.loads(
+        _texto(
+            await server.call_tool(
+                "consultar_indicador", {"indicador": "POBLACION_TOTAL", "area": "Naucalpan"}
+            )
+        )
+    )
+    assert datos["area"]["clave"] == "15057"
+    assert datos["ultimo"]["valor"] == 834434

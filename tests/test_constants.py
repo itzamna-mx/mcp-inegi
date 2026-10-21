@@ -1,6 +1,7 @@
 import pytest
 
-from mcp_inegi.constants import BANCO_BIE, BANCO_BISE, INDICADORES, banco_para, resolver_area
+from mcp_inegi.areas import resolver_area
+from mcp_inegi.constants import BANCO_BIE, BANCO_BISE, INDICADORES, banco_para
 
 
 @pytest.mark.parametrize(
@@ -26,7 +27,7 @@ def test_resolver_area(entrada, esperado):
     assert resolver_area(entrada) == esperado
 
 
-@pytest.mark.parametrize("entrada", ["33", "123", "99057", "Atlantis", "1505"])
+@pytest.mark.parametrize("entrada", ["33", "123", "99057", "15999", "Atlantis", "1505"])
 def test_resolver_area_invalida(entrada):
     with pytest.raises(ValueError):
         resolver_area(entrada)

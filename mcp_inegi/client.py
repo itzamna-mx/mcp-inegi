@@ -10,6 +10,7 @@ from typing import Any
 
 import httpx
 
+from .areas import resolver_area
 from .constants import (
     AREA_NACIONAL,
     BANCO_BIE,
@@ -19,7 +20,6 @@ from .constants import (
     INEGI_TOKEN_HELP_URL,
     PACKAGE_VERSION,
     banco_para,
-    resolver_area,
 )
 
 # El token del INEGI va en la ruta de la URL, y httpx registra cada URL en INFO: sin esto
