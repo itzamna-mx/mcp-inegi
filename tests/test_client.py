@@ -108,6 +108,14 @@ async def test_cache_acotada():
     assert len(c._cache) <= 3
 
 
+async def test_cache_catalogos_dura_24h():
+    c = FakeClient(cache_ttl=60.0)
+    await c.consultar("INFLACION_ANUAL")
+    exp_serie = next(exp for k, (exp, _) in c._cache.items() if k.startswith("INDICATOR/"))
+    exp_cat = next(exp for k, (exp, _) in c._cache.items() if k.startswith("CL_"))
+    assert exp_cat - exp_serie > 80_000
+
+
 async def test_metadatos(fake_client):
     m = await fake_client.metadatos("INFLACION_ANUAL")
     assert m["nombre_oficial"] == "Índice general"

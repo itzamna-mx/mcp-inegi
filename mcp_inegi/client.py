@@ -89,6 +89,9 @@ class InegiClient:
     #: Las series del INEGI cambian, como mucho, unas veces al mes.
     DEFAULT_CACHE_TTL = 3600.0
 
+    #: Unidades, fuentes, frecuencias y áreas geográficas casi nunca cambian (24 h).
+    DEFAULT_CATALOG_CACHE_TTL = 86400.0
+
     #: Se aceptan IDs y áreas arbitrarias: sin cota, la memoria crecería a voluntad.
     DEFAULT_CACHE_MAX_ENTRIES = 512
 
@@ -129,7 +132,12 @@ class InegiClient:
     def _cache_put(self, key: str, valor: Any) -> None:
         if self.cache_ttl <= 0:
             return
-        self._cache[key] = (monotonic() + self.cache_ttl, valor)
+        ttl = (
+            max(self.cache_ttl, self.DEFAULT_CATALOG_CACHE_TTL)
+            if key.startswith("CL_")
+            else self.cache_ttl
+        )
+        self._cache[key] = (monotonic() + ttl, valor)
         if len(self._cache) > self.cache_max_entries:
             for viejo in list(self._cache)[: len(self._cache) - self.cache_max_entries]:
                 self._cache.pop(viejo, None)
