@@ -58,7 +58,7 @@ async def test_consultar_nacional(fake_client):
 
 async def test_consultar_municipio(fake_client):
     r = await fake_client.consultar("POBLACION_TOTAL", "15057")
-    assert r["area"]["nombre"] == "Naucalpan de Juárez"
+    assert r["area"]["nombre"] == "Naucalpan de Juárez, México"
     assert r["ultimo"] == {"periodo": "2020", "valor": 834434}
 
 
@@ -174,3 +174,15 @@ def test_resolver_indicador_aproximado(aproximado, clave):
 def test_indicador_desconocido_lista_claves_validas():
     with pytest.raises(InegiAPIError, match="TASA_DESOCUPACION"):
         resolver_indicador("precio del aguacate")
+
+
+async def test_resumen_listo_para_citar(fake_client):
+    r = await fake_client.consultar("POBLACION_TOTAL", "15057")
+    assert r["resumen"] == (
+        "Población total en Naucalpan de Juárez, México: 834,434 personas (2020). "
+        "Fuente: INEGI, Censos y Conteos de Población y Vivienda."
+    )
+    r = await fake_client.consultar("INFLACION_ANUAL")
+    assert r["resumen"].startswith("Inflación anual (INPC general, variación anual %) en Estados")
+    assert "3.45 %" in r["resumen"] and "septiembre de 2026" in r["resumen"]
+    assert r["banco"] == "Banco de Información Económica del INEGI"

@@ -16,12 +16,14 @@ from .constants import (
     AREA_NACIONAL,
     BANCO_BIE,
     BANCO_BISE,
+    ESTADOS,
     INDICADORES,
     INEGI_API_BASE_URL,
     INEGI_TOKEN_HELP_URL,
     PACKAGE_VERSION,
     banco_para,
 )
+from .resumen import BANCOS, formatear_valor, fuente_corta, periodo_legible
 
 # El token del INEGI va en la ruta de la URL, y httpx registra cada URL en INFO: sin esto
 # terminaría en los logs del cliente MCP o en el journal del servidor remoto.
@@ -342,22 +344,35 @@ class InegiClient:
             self.describir("CL_SOURCE", serie.get("SOURCE"), banco),
         )
 
+        area_nombre = area_nombre or (
+            "Estados Unidos Mexicanos" if clave_area == AREA_NACIONAL else None
+        )
+        if area_nombre and len(clave_area) == 5:
+            # "Monterrey" a secas es ambiguo para un modelo: se agrega el estado.
+            area_nombre = f"{area_nombre}, {ESTADOS[clave_area[:2]]}"
+        ultimo = obs[0] if obs else None
+        resumen = None
+        if ultimo:
+            resumen = (
+                f"{nombre} en {area_nombre or clave_area}: "
+                f"{formatear_valor(ultimo['valor'], unidad, multiplicador)} "
+                f"({periodo_legible(ultimo['periodo'], frecuencia)}). "
+                f"Fuente: {fuente_corta(fuente, ultimo['periodo'])}."
+            )
+
         return {
+            "resumen": resumen,
             "indicador": clave,
             "id_indicador": id_indicador,
             "nombre": nombre,
-            "area": {
-                "clave": clave_area,
-                "nombre": area_nombre
-                or ("Estados Unidos Mexicanos" if clave_area == AREA_NACIONAL else None),
-            },
+            "area": {"clave": clave_area, "nombre": area_nombre},
             "unidad": unidad,
             "multiplicador": multiplicador,
             "frecuencia": frecuencia,
             "fuente": fuente,
             "ultima_actualizacion": _fecha_iso(serie.get("LASTUPDATE")),
-            "banco": banco,
-            "ultimo": obs[0] if obs else None,
+            "banco": BANCOS.get(banco, banco),
+            "ultimo": ultimo,
             "observaciones": obs[:n],
             "total_observaciones": len(obs),
         }

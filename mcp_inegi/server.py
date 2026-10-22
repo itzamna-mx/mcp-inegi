@@ -15,6 +15,7 @@ from .areas import buscar_municipios
 from .client import InegiAPIError, InegiClient
 from .constants import ESTADOS, INDICADORES, PACKAGE_VERSION
 from .denue import DenueClient
+from .resumen import fuente_corta
 
 #: Máximo de áreas por comparación: cada una es una consulta a la API.
 MAX_AREAS = 33
@@ -144,7 +145,7 @@ def create_server(token: str | None = None, denue_token: str | None = None) -> M
                 "nombre": meta["nombre"],
                 "unidad": meta["unidad"],
                 "multiplicador": meta["multiplicador"],
-                "fuente": meta["fuente"],
+                "fuente": fuente_corta(meta["fuente"], (meta["ultimo"] or {}).get("periodo")),
                 "ultima_actualizacion": meta["ultima_actualizacion"],
                 "resultados": validas + errores,
             }

@@ -195,13 +195,23 @@ class DenueClient(InegiClient):
             por_codigo[f["AE"]] = por_codigo.get(f["AE"], 0) + total
             por_estado[f["AG"]] = por_estado.get(f["AG"], 0) + total
 
+        total = sum(por_codigo.values())
+        area_ficha = self._ficha_area(clave)
+        nombres = " + ".join(
+            f"«{nombre_actividad(c) or c}»" for c in (sorted(por_codigo) or codigo.split(","))
+        )
+        tamano = f" con {ESTRATOS[e]}" if e in ESTRATOS else ""
         resultado: dict[str, Any] = {
-            "total": sum(por_codigo.values()),
+            "resumen": (
+                f"En {area_ficha['nombre']} hay {total:,} establecimientos de {nombres}{tamano}, "
+                "según el DENUE del INEGI."
+            ),
+            "total": total,
             "actividad": [
                 {**ficha_actividad(c), "total": t} for c, t in sorted(por_codigo.items())
             ]
             or [ficha_actividad(c) for c in codigo.split(",")],
-            "area": self._ficha_area(clave),
+            "area": area_ficha,
             "personal": ESTRATOS.get(e, "todos los tamaños"),
             "fuente": "INEGI, Directorio Estadístico Nacional de Unidades Económicas (DENUE)",
         }
@@ -247,9 +257,26 @@ class DenueClient(InegiClient):
         ruta = f"BuscarAreaActEstr/{base}/{e}" if e != "0" else f"BuscarAreaAct/{base}"
 
         negocios = [_negocio(d) for d in await self._get_json(ruta)]
+        area_ficha = self._ficha_area(clave)
+        que_se_busco = " ".join(
+            x for x in (f"«{texto}»" if texto else None,
+                        f"de «{nombre_actividad(codigo) or codigo}»" if codigo else None) if x
+        )
         resultado: dict[str, Any] = {
+            "resumen": (
+                (
+                    f"Los primeros {len(negocios)} negocios {que_se_busco} en "
+                    f"{area_ficha['nombre']} (hay más; el total sale con contar_negocios). "
+                    "Fuente: DENUE, INEGI."
+                    if len(negocios) == n
+                    else f"{len(negocios)} negocios {que_se_busco} en {area_ficha['nombre']}. "
+                    "Fuente: DENUE, INEGI."
+                )
+                if negocios
+                else f"No se encontraron negocios {que_se_busco} en {area_ficha['nombre']}."
+            ),
             "busqueda": texto or None,
-            "area": self._ficha_area(clave),
+            "area": area_ficha,
             "actividad": ficha_actividad(codigo) if codigo else None,
             "personal": ESTRATOS.get(e, "todos los tamaños"),
             "mostrados": len(negocios),
@@ -290,7 +317,15 @@ class DenueClient(InegiClient):
                     latitud, longitud, neg["latitud"], neg["longitud"]
                 )
         negocios.sort(key=lambda x: x.get("distancia_m", 10**9))
+        cerca = negocios[0] if negocios else None
+        que_se_busco = "" if texto == "todos" else f" «{texto}»"
         return {
+            "resumen": (
+                f"{len(negocios)} negocios{que_se_busco} a menos de {radio:,} m; el más cercano es "
+                f"{cerca.get('nombre')} a {cerca.get('distancia_m', '?')} m (DENUE, INEGI)."
+                if cerca
+                else f"No hay negocios{que_se_busco} registrados a menos de {radio:,} m."
+            ),
             "busqueda": None if texto == "todos" else texto,
             "centro": {"latitud": latitud, "longitud": longitud},
             "radio_m": radio,
