@@ -5,12 +5,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from difflib import get_close_matches
 from time import monotonic
 from typing import Any
 
 import httpx
 
-from .areas import resolver_area
+from .areas import normalizar, resolver_area
 from .constants import (
     AREA_NACIONAL,
     BANCO_BIE,
@@ -65,8 +66,50 @@ def _fecha_iso(texto: str | None) -> str | None:
     return texto
 
 
+# Palabras sueltas que usan las personas (y los modelos chicos) para referirse a un indicador.
+_ALIAS_INDICADORES = {
+    "desempleo": "TASA_DESOCUPACION",
+    "desocupacion": "TASA_DESOCUPACION",
+    "paro": "TASA_DESOCUPACION",
+    "desocupados": "POBLACION_DESOCUPADA",
+    "desempleados": "POBLACION_DESOCUPADA",
+    "inflacion": "INFLACION_ANUAL",
+    "inpc": "INPC",
+    "subyacente": "INFLACION_SUBYACENTE_ANUAL",
+    "poblacion": "POBLACION_TOTAL",
+    "habitantes": "POBLACION_TOTAL",
+    "hombres": "POBLACION_HOMBRES",
+    "mujeres": "POBLACION_MUJERES",
+    "indigena": "POBLACION_INDIGENA_PCT",
+    "extranjeros": "POBLACION_NACIDA_EXTRANJERO",
+    "pib": "PIB_REAL",
+    "crecimiento": "PIB_VARIACION_ANUAL",
+    "igae": "IGAE",
+    "pea": "POBLACION_ECONOMICAMENTE_ACTIVA",
+}
+
+
+def _adivinar_clave(texto: str) -> str | None:
+    """Clave del catálogo para un nombre aproximado ("desempleo", "DESMPLEO_ACTIVO")."""
+    normal = normalizar(texto).replace("_", " ").replace("-", " ")
+    parecida = get_close_matches(normal.upper().replace(" ", "_"), INDICADORES, n=1, cutoff=0.8)
+    if parecida:
+        return parecida[0]
+    palabras = normal.split()
+    # "inflacion subyacente" debe ganarle a "inflacion": se revisa primero la palabra más rara.
+    for palabra in sorted(palabras, key=lambda w: w != "subyacente"):
+        alias = get_close_matches(palabra, _ALIAS_INDICADORES, n=1, cutoff=0.8)
+        if alias:
+            return _ALIAS_INDICADORES[alias[0]]
+    return None
+
+
 def resolver_indicador(indicador: str) -> tuple[str | None, str, str | None]:
-    """Devuelve (clave del catálogo o None, id numérico, banco conocido o None)."""
+    """Devuelve (clave del catálogo o None, id numérico, banco conocido o None).
+
+    Acepta la clave exacta, un ID numérico o un nombre aproximado: los modelos chicos suelen
+    inventar claves parecidas ("DESMPLEO_ACTIVO"), y eso no debe tumbar la consulta.
+    """
     texto = str(indicador).strip()
     clave = texto.upper().replace(" ", "_").replace("-", "_")
     if clave in INDICADORES:
@@ -77,9 +120,13 @@ def resolver_indicador(indicador: str) -> tuple[str | None, str, str | None]:
             if info["id"] == texto:
                 return k, texto, info["banco"]
         return None, texto, None
+    adivinada = _adivinar_clave(texto)
+    if adivinada:
+        info = INDICADORES[adivinada]
+        return adivinada, info["id"], info["banco"]
     raise InegiAPIError(
-        f"Indicador '{indicador}' no reconocido. Usa una clave de indicadores_clave "
-        "(p. ej. 'INFLACION_ANUAL') o un ID numérico del INEGI."
+        f"Indicador '{indicador}' no reconocido. Claves válidas: {', '.join(INDICADORES)}; "
+        "o un ID numérico del INEGI."
     )
 
 

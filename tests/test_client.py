@@ -152,3 +152,25 @@ async def test_varias_fuentes_se_juntan():
             return {"CODE": [{"Description": "Censo 2020"}, {"Description": "Conteo 2005 "}]}
 
     assert await Multi().describir("CL_SOURCE", "2,3", "BISE") == "Censo 2020; Conteo 2005"
+
+
+@pytest.mark.parametrize(
+    "aproximado,clave",
+    [
+        ("DESMPLEO_ACTIVO", "TASA_DESOCUPACION"),
+        ("desempleo", "TASA_DESOCUPACION"),
+        ("tasa de desocupación", "TASA_DESOCUPACION"),
+        ("INFLACION_ANUAL_GENERAL", "INFLACION_ANUAL"),
+        ("inflación subyacente", "INFLACION_SUBYACENTE_ANUAL"),
+        ("poblacion", "POBLACION_TOTAL"),
+        ("PIB", "PIB_REAL"),
+        ("INFLACON_ANUAL", "INFLACION_ANUAL"),
+    ],
+)
+def test_resolver_indicador_aproximado(aproximado, clave):
+    assert resolver_indicador(aproximado)[0] == clave
+
+
+def test_indicador_desconocido_lista_claves_validas():
+    with pytest.raises(InegiAPIError, match="TASA_DESOCUPACION"):
+        resolver_indicador("precio del aguacate")
