@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcp-inegi"
-version = "0.2.3"
+version = "0.3.0"
 description = "Servidor MCP para datos oficiales del INEGI: indicadores (población, inflación, empleo, PIB, IGAE) y el directorio de negocios DENUE, por país, estado y municipio"
 readme = "README.md"
 license = {text = "MIT"}

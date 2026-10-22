@@ -58,3 +58,11 @@ def test_sin_resultados():
     assert buscar_municipios("Gotham") == []
     with pytest.raises(ValueError, match="Gotham"):
         resolver_area("Gotham")
+
+
+def test_texto_de_mas_despues_del_lugar():
+    assert resolver_area("naucalpan coenctandote al mcp de inegi") == "15057"
+    assert resolver_area("Jalisco por favor") == "14"
+    assert resolver_area("Ciudad de México según el INEGI") == "09"
+    with pytest.raises(ValueError):
+        resolver_area("conectandote al mcp")

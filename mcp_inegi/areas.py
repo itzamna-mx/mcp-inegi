@@ -164,6 +164,18 @@ def resolver_area(area: str | None) -> str:
         return candidatos[0]["clave"]
     if candidatos:
         raise AreaAmbiguaError(texto, candidatos)
+
+    # Texto de más después del lugar ("naucalpan conectándote al mcp de inegi"): se prueban las
+    # primeras palabras, de más a menos, hasta reconocer un lugar.
+    palabras = texto.split()
+    for k in range(len(palabras) - 1, 0, -1):
+        prefijo = " ".join(palabras[:k]).strip(" ,.")
+        try:
+            return resolver_area(prefijo)
+        except AreaAmbiguaError:
+            raise
+        except ValueError:
+            continue
     raise ValueError(
         f"No reconozco el área '{texto}'. Usa el nombre de un estado o municipio "
         "('Jalisco', 'Naucalpan', 'Benito Juárez, CDMX') o su clave numérica."

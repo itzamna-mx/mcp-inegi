@@ -15,6 +15,7 @@ from .areas import buscar_municipios
 from .client import InegiAPIError, InegiClient
 from .constants import ESTADOS, INDICADORES, PACKAGE_VERSION
 from .denue import DenueClient
+from .perfil import perfil_area as _perfil_area
 from .resumen import fuente_corta
 
 #: Máximo de áreas por comparación: cada una es una consulta a la API.
@@ -174,6 +175,21 @@ def create_server(token: str | None = None, denue_token: str | None = None) -> M
                 "fuente": "INEGI, Marco Geoestadístico (catálogo de municipios)",
             }
         )
+
+    @server.tool()
+    async def perfil_area(area: str) -> str:
+        """Perfil de un lugar: población (total, mujeres, hombres), % indígena, nacidos en otro
+        país, desempleo y número de negocios con sus giros principales, cada cifra con su periodo.
+
+        Úsala para preguntas generales como "dame información de Naucalpan" o "¿cómo es Jalisco?".
+
+        Args:
+            area: Estado o municipio, por nombre o clave ('Naucalpan', 'Jalisco', '15057').
+        """
+        try:
+            return _json(await _perfil_area(client, denue, area))
+        except InegiAPIError as e:
+            return f"Error al armar el perfil de {area}: {e}"
 
     @server.tool()
     async def buscar_actividad(descripcion: str) -> str:

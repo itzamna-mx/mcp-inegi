@@ -17,6 +17,7 @@ abierto sobre los datos públicos de México. Proyecto independiente, sin afilia
 - *¿Cuánta gente vive en Naucalpan?* → 834,434 personas (Censo 2020, municipio 15057)
 - *¿Qué estados tienen más población desocupada?* → compara las 32 entidades con la ENOE
 - *¿Cómo va el PIB?* → variación anual, PIB real en millones de pesos de 2018 e IGAE mensual
+- *Dame información de Naucalpan* → perfil con población, desempleo y 36,542 negocios
 - *¿Cuántas tortillerías hay en Naucalpan?* → 515 (DENUE, actividad SCIAN 311830)
 - *¿Qué cafés hay a 300 m del Zócalo?* → nombre, dirección y distancia de cada uno
 - *Dame dentistas en Coyoacán* → nombre, dirección, teléfono y sitio web
@@ -28,6 +29,7 @@ Cada respuesta trae el ID del indicador, el periodo, la unidad, la fuente oficia
 
 | Herramienta | Qué hace |
 |---|---|
+| `perfil_area` | Perfil de un lugar: población, mujeres y hombres, % indígena, desempleo y negocios |
 | `indicadores_clave` | Catálogo de indicadores verificados, con su ID y cobertura geográfica |
 | `consultar_indicador` | Último valor o serie de un indicador para el país, un estado o un municipio |
 | `comparar_areas` | El mismo indicador en varios estados o municipios, ordenado de mayor a menor |

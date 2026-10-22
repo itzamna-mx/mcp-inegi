@@ -32,6 +32,7 @@ async def test_tools_registradas(server):
         "contar_negocios",
         "buscar_negocios",
         "negocios_cercanos",
+        "perfil_area",
     }
 
 
