@@ -35,6 +35,39 @@ estados, como Benito Juárez, el servidor devuelve los candidatos en lugar de ad
 
 ## Instalación
 
+### Opción 1: Endpoint remoto (sin instalar nada, sin token)
+
+Hay una instancia pública hospedada en `streamable-http`. No necesitas Python ni pedir tu propio
+token del INEGI:
+
+```text
+https://itzamna-mcp.duckdns.org/inegi/mcp
+```
+
+En Claude Desktop (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "inegi": {
+      "type": "streamable-http",
+      "url": "https://itzamna-mcp.duckdns.org/inegi/mcp"
+    }
+  }
+}
+```
+
+En Claude Code:
+
+```bash
+claude mcp add --transport http inegi https://itzamna-mcp.duckdns.org/inegi/mcp
+```
+
+> Es un servicio comunitario en infraestructura propia, con límite de 30 consultas por minuto por IP.
+> Para uso intensivo o en producción, instálalo localmente con tu propio token.
+
+### Opción 2: En tu computadora (con `uvx`)
+
 1. Pide tu token gratuito en el
    [INEGI](https://www.inegi.org.mx/app/desarrolladores/generatoken/Usuarios/token_Verify).
 2. Verifica la conexión:
@@ -64,7 +97,7 @@ En Claude Code:
 claude mcp add inegi -e INEGI_TOKEN=tu_token -- uvx mcp-inegi
 ```
 
-## Servidor remoto
+## Servidor remoto propio
 
 ```bash
 mcp-inegi --transport streamable-http --host 127.0.0.1 --port 8000 --allowed-host tu.dominio
@@ -83,7 +116,8 @@ Cosas que descubrimos al construirlo (octubre de 2026) y que el servidor ya resu
 - El token va en la URL, así que el servidor silencia los logs de `httpx` para no filtrarlo.
 - El catálogo de municipios viene incluido en el paquete (`scripts/generar_municipios.py` lo
   regenera desde el Marco Geoestadístico).
-- Las respuestas se guardan en caché una hora (`INEGI_CACHE_TTL`, en segundos).
+- Las series se guardan en caché una hora (`INEGI_CACHE_TTL`, en segundos) y los catálogos de
+  unidades, fuentes, frecuencias y áreas durante 24 horas.
 
 ## Desarrollo
 
