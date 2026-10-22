@@ -64,8 +64,17 @@ _SINONIMOS = {
 _POCO_PROBABLES = ("31", "32", "33", "43")
 
 
+def _sinonimo(palabra: str) -> str:
+    """Sinónimo de una palabra o de su singular ("oxxos" -> "oxxo", "bares" -> "bar")."""
+    for forma in (palabra, palabra[:-1] if palabra.endswith("s") else None,
+                  palabra[:-2] if palabra.endswith("es") else None):
+        if forma and forma in _SINONIMOS:
+            return _SINONIMOS[forma]
+    return palabra
+
+
 def _expandir(texto: str) -> str:
-    return " ".join(_SINONIMOS.get(w, w) for w in _palabras(texto))
+    return " ".join(_sinonimo(w) for w in _palabras(texto))
 
 
 # El SCIAN usa "elaboración" y "fabricación" para lo mismo.
