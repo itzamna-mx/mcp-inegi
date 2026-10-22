@@ -51,9 +51,7 @@ async def test_consultar_indicador(server):
 
 async def test_consultar_indicador_error_legible(server):
     texto = _texto(
-        await server.call_tool(
-            "consultar_indicador", {"indicador": "INFLACION_ANUAL", "area": "Jalisco"}
-        )
+        await server.call_tool("consultar_indicador", {"indicador": "xyzzy-no-existe-123"})
     )
     assert texto.startswith("Error")
 

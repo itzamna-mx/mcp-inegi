@@ -13,7 +13,13 @@ import httpx
 from .actividades import buscar_actividades, ficha_actividad, nombre_actividad
 from .areas import resolver_area
 from .client import InegiAPIError, InegiClient
-from .constants import AREA_NACIONAL, DENUE_API_BASE_URL, DENUE_TOKEN_HELP_URL, ESTADOS, ESTRATOS
+from .constants import (
+    AREA_NACIONAL,
+    DENUE_API_BASE_URL,
+    DENUE_TOKEN_HELP_URL,
+    ESTRATOS,
+    nombre_estado,
+)
 
 #: El DENUE no acepta radios mayores ("Radio máximo 5000 metros").
 RADIO_MAXIMO = 5000
@@ -218,7 +224,7 @@ class DenueClient(InegiClient):
         if clave == AREA_NACIONAL and por_estado:
             top = sorted(por_estado.items(), key=lambda x: x[1], reverse=True)[:5]
             resultado["estados_con_mas"] = [
-                {"estado": ESTADOS.get(k, k), "clave": k, "total": v} for k, v in top
+                {"estado": nombre_estado(k), "clave": k, "total": v} for k, v in top
             ]
         if alternativas:
             resultado["otras_actividades_posibles"] = alternativas
@@ -342,10 +348,10 @@ class DenueClient(InegiClient):
         if clave == AREA_NACIONAL:
             return {"clave": clave, "nombre": "Estados Unidos Mexicanos"}
         if len(clave) == 2:
-            return {"clave": clave, "nombre": ESTADOS.get(clave)}
+            return {"clave": clave, "nombre": nombre_estado(clave)}
         return {
             "clave": clave,
-            "nombre": f"{municipios().get(clave)}, {ESTADOS.get(clave[:2])}",
+            "nombre": f"{municipios().get(clave)}, {nombre_estado(clave[:2])}",
         }
 
 

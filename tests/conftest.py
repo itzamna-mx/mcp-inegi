@@ -15,6 +15,8 @@ CATALOGOS = {
     "CL_UNIT/188": "Personas",
     "CL_FREQ/8": "Mensual",
     "CL_FREQ/3": "Quinquenal",
+    "CL_FREQ/4": "Trimestral",
+    "CL_SOURCE/8": "INEGI. Encuesta Nacional de Ocupación y Empleo (ENOE)",
     "CL_SOURCE/1": "INEGI. Índice Nacional de Precios al Consumidor (INPC)",
     "CL_SOURCE/2": "Censos y Conteos de Población y Vivienda",
     "CL_INDICATOR/910406": "Índice general",
@@ -58,6 +60,12 @@ SERIES = {
     ),
     "INDICATOR/1002000001/es/15057/false/BISE/2.0": serie(
         "1002000001", [("2020", "834434.0000"), ("2010", "833779.0000")], "188", "3", "2"
+    ),
+    "INDICATOR/6200093973/es/15/false/BISE/2.0": serie(
+        "6200093973", [("2026/02", "256251"), ("2026/01", "270000")], "188", "4", "8"
+    ),
+    "INDICATOR/6200093960/es/15/false/BISE/2.0": serie(
+        "6200093960", [("2026/02", "8358526"), ("2026/01", "8300000")], "188", "4", "8"
     ),
 }
 

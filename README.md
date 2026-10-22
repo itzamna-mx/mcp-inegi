@@ -140,6 +140,11 @@ Cosas que descubrimos al construirlo (octubre de 2026) y que el servidor ya resu
 - El DENUE a veces devuelve el JSON doblemente codificado (un string que trae la lista adentro).
 - El catálogo SCIAN viene incluido (`scripts/generar_scian.py` lo regenera desde los catálogos
   2023 y 2018 del INEGI; requiere `openpyxl`).
+- Si un lugar no tiene el dato (la tasa de desempleo no existe por municipio), se usa el de su
+  estado o el nacional y la respuesta lo dice. La tasa de desempleo por estado se calcula como
+  población desocupada / población económicamente activa, ambas de la ENOE trimestral.
+- Cada respuesta trae un campo `resumen`: una frase lista para citar con la cifra, el periodo y la
+  fuente, pensada para que modelos pequeños no tengan que reformatear números.
 - Las series se guardan en caché una hora (`INEGI_CACHE_TTL`, en segundos) y los catálogos de
   unidades, fuentes, frecuencias y áreas durante 24 horas.
 

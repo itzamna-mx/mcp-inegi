@@ -16,12 +16,12 @@ from .constants import (
     AREA_NACIONAL,
     BANCO_BIE,
     BANCO_BISE,
-    ESTADOS,
     INDICADORES,
     INEGI_API_BASE_URL,
     INEGI_TOKEN_HELP_URL,
     PACKAGE_VERSION,
     banco_para,
+    nombre_estado,
 )
 from .resumen import BANCOS, formatear_valor, fuente_corta, periodo_legible
 
@@ -130,6 +130,29 @@ def resolver_indicador(indicador: str) -> tuple[str | None, str, str | None]:
         f"Indicador '{indicador}' no reconocido. Claves válidas: {', '.join(INDICADORES)}; "
         "o un ID numérico del INEGI."
     )
+
+
+def _nombre_area(clave: str) -> str:
+    if clave == AREA_NACIONAL:
+        return "Estados Unidos Mexicanos"
+    if len(clave) == 2:
+        return nombre_estado(clave)
+    from .areas import municipios
+
+    return f"{municipios().get(clave, clave)}, {nombre_estado(clave[:2])}"
+
+
+def _marcar_aproximacion(resultado: dict[str, Any], clave_solicitada: str) -> dict[str, Any]:
+    """Avisa que el dato es de un nivel superior al lugar que se pidió."""
+    solicitada = _nombre_area(clave_solicitada)
+    usada = (resultado.get("area") or {}).get("nombre") or "un nivel superior"
+    nota = f"El INEGI no publica este dato para {solicitada}; se muestra el dato de {usada}."
+    return {
+        **resultado,
+        "resumen": f"{nota} {resultado.get('resumen') or ''}".strip(),
+        "area_solicitada": {"clave": clave_solicitada, "nombre": solicitada},
+        "nota": nota,
+    }
 
 
 class InegiClient:
@@ -310,8 +333,14 @@ class InegiClient:
         indicador: str,
         area: str | None = None,
         observaciones: int = 1,
+        subir_nivel: bool = True,
     ) -> dict[str, Any]:
-        """Últimas `observaciones` de un indicador para un área, con su fuente y metadatos."""
+        """Últimas `observaciones` de un indicador para un área, con su fuente y metadatos.
+
+        Con `subir_nivel` (por defecto), si el área no tiene el dato se usa el de su estado o
+        el nacional, con una nota. Las comparaciones lo apagan: ahí sustituir un estado por el
+        dato nacional haría pasar una cifra ajena como propia.
+        """
         clave, id_indicador, banco = resolver_indicador(indicador)
         try:
             clave_area = resolver_area(area)
@@ -319,14 +348,35 @@ class InegiClient:
             raise InegiAPIError(str(e)) from None
         n = max(1, min(int(observaciones), MAX_OBSERVACIONES))
 
-        try:
-            serie, banco = await self._serie_cruda(id_indicador, clave_area, banco)
-        except InegiNotFoundError:
-            raise InegiNotFoundError(
-                f"El INEGI no tiene datos del indicador {id_indicador} para el área "
-                f"'{clave_area}'. Revisa la cobertura en indicadores_clave: varios "
-                "indicadores solo existen a nivel nacional."
-            ) from None
+        # Si el lugar no tiene dato (la tasa de desempleo no existe por municipio), se sube de
+        # nivel —municipio, estado, país— y se dice con claridad que es una aproximación.
+        niveles = [clave_area]
+        if subir_nivel:
+            if len(clave_area) == 5:
+                niveles.append(clave_area[:2])
+            if clave_area != AREA_NACIONAL:
+                niveles.append(AREA_NACIONAL)
+        for nivel in niveles:
+            try:
+                if clave == "TASA_DESOCUPACION" and nivel != AREA_NACIONAL and len(nivel) == 2:
+                    resultado = await self._tasa_desocupacion_estatal(nivel, n)
+                else:
+                    resultado = await self._consultar_en(clave, id_indicador, banco, nivel, n)
+            except InegiNotFoundError:
+                continue
+            if nivel != clave_area:
+                resultado = _marcar_aproximacion(resultado, clave_area)
+            return resultado
+        raise InegiNotFoundError(
+            f"El INEGI no tiene datos del indicador {id_indicador} para el área "
+            f"'{clave_area}' ni para niveles superiores."
+        )
+
+    async def _consultar_en(
+        self, clave: str | None, id_indicador: str, banco: str | None, clave_area: str, n: int
+    ) -> dict[str, Any]:
+        """consultar() para un área concreta; lanza InegiNotFoundError si no hay dato ahí."""
+        serie, banco = await self._serie_cruda(id_indicador, clave_area, banco)
 
         obs = [
             {"periodo": o.get("TIME_PERIOD"), "valor": _a_numero(o.get("OBS_VALUE"))}
@@ -349,7 +399,9 @@ class InegiClient:
         )
         if area_nombre and len(clave_area) == 5:
             # "Monterrey" a secas es ambiguo para un modelo: se agrega el estado.
-            area_nombre = f"{area_nombre}, {ESTADOS[clave_area[:2]]}"
+            area_nombre = f"{area_nombre}, {nombre_estado(clave_area[:2])}"
+        elif len(clave_area) == 2 and clave_area != AREA_NACIONAL:
+            area_nombre = nombre_estado(clave_area)
         ultimo = obs[0] if obs else None
         resumen = None
         if ultimo:
@@ -372,6 +424,68 @@ class InegiClient:
             "fuente": fuente,
             "ultima_actualizacion": _fecha_iso(serie.get("LASTUPDATE")),
             "banco": BANCOS.get(banco, banco),
+            "ultimo": ultimo,
+            "observaciones": obs[:n],
+            "total_observaciones": len(obs),
+        }
+
+    async def _tasa_desocupacion_estatal(self, estado: str, n: int) -> dict[str, Any]:
+        """Tasa de desocupación de un estado: desocupados / PEA, ambas de la ENOE trimestral.
+
+        El INEGI publica la tasa (444612) solo a nivel nacional, pero por estado sí publica
+        las dos poblaciones de la misma encuesta, así que el cociente es directo.
+        """
+        des_info, pea_info = (
+            INDICADORES["POBLACION_DESOCUPADA"],
+            INDICADORES["POBLACION_ECONOMICAMENTE_ACTIVA"],
+        )
+        desocupada, pea = await asyncio.gather(
+            self._consultar_en(
+                "POBLACION_DESOCUPADA", des_info["id"], des_info["banco"], estado, MAX_OBSERVACIONES
+            ),
+            self._consultar_en(
+                "POBLACION_ECONOMICAMENTE_ACTIVA",
+                pea_info["id"],
+                pea_info["banco"],
+                estado,
+                MAX_OBSERVACIONES,
+            ),
+        )
+        pea_por_periodo = {o["periodo"]: o["valor"] for o in pea["observaciones"] if o["valor"]}
+        obs = [
+            {
+                "periodo": o["periodo"],
+                "valor": round(100 * o["valor"] / pea_por_periodo[o["periodo"]], 6),
+            }
+            for o in desocupada["observaciones"]
+            if o["valor"] is not None and pea_por_periodo.get(o["periodo"])
+        ]
+        if not obs:
+            raise InegiNotFoundError("Sin periodos comunes entre desocupados y PEA.")
+        ultimo = obs[0]
+        area = desocupada["area"]
+        fuente = "INEGI, Encuesta Nacional de Ocupación y Empleo (ENOE)"
+        return {
+            "resumen": (
+                f"Tasa de desocupación en {area['nombre']}: "
+                f"{formatear_valor(ultimo['valor'], 'Porcentaje')} "
+                f"({periodo_legible(ultimo['periodo'], 'Trimestral')}), calculada como "
+                f"población desocupada / población económicamente activa. Fuente: {fuente}."
+            ),
+            "indicador": "TASA_DESOCUPACION",
+            "id_indicador": f"{des_info['id']}/{pea_info['id']}",
+            "nombre": "Tasa de desocupación (calculada)",
+            "area": area,
+            "unidad": "Porcentaje",
+            "multiplicador": None,
+            "frecuencia": "Trimestral",
+            "fuente": fuente,
+            "calculo": (
+                f"{des_info['id']} (población desocupada) / {pea_info['id']} "
+                "(población económicamente activa) × 100"
+            ),
+            "ultima_actualizacion": desocupada["ultima_actualizacion"],
+            "banco": desocupada["banco"],
             "ultimo": ultimo,
             "observaciones": obs[:n],
             "total_observaciones": len(obs),

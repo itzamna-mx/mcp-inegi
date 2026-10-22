@@ -7,7 +7,7 @@ import unicodedata
 from functools import lru_cache
 from importlib.resources import files
 
-from .constants import AREA_NACIONAL, ESTADOS
+from .constants import AREA_NACIONAL, ESTADOS, nombre_estado
 
 # Nombres comunes que no coinciden con el nombre oficial del estado.
 _ALIAS_ESTADOS = {
@@ -84,7 +84,7 @@ def _estado(texto: str, *, en_contexto: bool = False) -> str | None:
 
 
 def _ficha(clave: str) -> dict[str, str]:
-    return {"clave": clave, "nombre": municipios()[clave], "estado": ESTADOS[clave[:2]]}
+    return {"clave": clave, "nombre": municipios()[clave], "estado": nombre_estado(clave[:2])}
 
 
 def buscar_municipios(texto: str, estado: str | None = None) -> list[dict[str, str]]:

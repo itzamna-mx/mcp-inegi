@@ -58,7 +58,7 @@ async def test_consultar_nacional(fake_client):
 
 async def test_consultar_municipio(fake_client):
     r = await fake_client.consultar("POBLACION_TOTAL", "15057")
-    assert r["area"]["nombre"] == "Naucalpan de Juárez, México"
+    assert r["area"]["nombre"] == "Naucalpan de Juárez, Estado de México"
     assert r["ultimo"] == {"periodo": "2020", "valor": 834434}
 
 
@@ -69,9 +69,35 @@ async def test_limite_de_observaciones(fake_client):
     assert len(r["observaciones"]) == 1
 
 
-async def test_sin_datos_para_area(fake_client):
-    with pytest.raises(InegiNotFoundError, match="cobertura"):
-        await fake_client.consultar("INFLACION_ANUAL", "Jalisco")
+async def test_sin_datos_para_area_sube_a_nacional(fake_client):
+    r = await fake_client.consultar("INFLACION_ANUAL", "Jalisco")
+    assert r["area"]["clave"] == "00"
+    assert r["area_solicitada"] == {"clave": "14", "nombre": "Jalisco"}
+    assert r["resumen"].startswith("El INEGI no publica")
+    assert "Jalisco" in r["nota"]
+
+
+async def test_sin_subir_nivel_falla(fake_client):
+    with pytest.raises(InegiNotFoundError):
+        await fake_client.consultar("INFLACION_ANUAL", "Jalisco", subir_nivel=False)
+
+
+async def test_municipio_sin_dato_sube_al_estado(fake_client):
+    # La población de 15057 existe, pero simulamos un indicador que solo existe por estado.
+    from tests.conftest import SERIES
+
+    SERIES.pop("INDICATOR/1002000001/es/15057/false/BISE/2.0")
+    try:
+        c = type(fake_client)()
+        r = await c.consultar("POBLACION_TOTAL", "Naucalpan")
+        assert r["area"]["clave"] == "15"
+        assert r["area_solicitada"]["nombre"] == "Naucalpan de Juárez, Estado de México"
+    finally:
+        from tests.conftest import serie
+
+        SERIES["INDICATOR/1002000001/es/15057/false/BISE/2.0"] = serie(
+            "1002000001", [("2020", "834434.0000"), ("2010", "833779.0000")], "188", "3", "2"
+        )
 
 
 async def test_area_invalida(fake_client):
@@ -179,10 +205,25 @@ def test_indicador_desconocido_lista_claves_validas():
 async def test_resumen_listo_para_citar(fake_client):
     r = await fake_client.consultar("POBLACION_TOTAL", "15057")
     assert r["resumen"] == (
-        "Población total en Naucalpan de Juárez, México: 834,434 personas (2020). "
+        "Población total en Naucalpan de Juárez, Estado de México: 834,434 personas (2020). "
         "Fuente: INEGI, Censos y Conteos de Población y Vivienda."
     )
     r = await fake_client.consultar("INFLACION_ANUAL")
     assert r["resumen"].startswith("Inflación anual (INPC general, variación anual %) en Estados")
     assert "3.45 %" in r["resumen"] and "septiembre de 2026" in r["resumen"]
     assert r["banco"] == "Banco de Información Económica del INEGI"
+
+
+async def test_tasa_desocupacion_estatal_calculada(fake_client):
+    r = await fake_client.consultar("desempleo", "Estado de México")
+    assert r["nombre"] == "Tasa de desocupación (calculada)"
+    assert r["ultimo"] == {"periodo": "2026/02", "valor": pytest.approx(3.0657, abs=1e-3)}
+    assert "3.07 %" in r["resumen"] and "2.º trimestre de 2026" in r["resumen"]
+    assert "calculo" in r
+
+
+async def test_tasa_desocupacion_municipio_usa_la_estatal(fake_client):
+    r = await fake_client.consultar("desempleo", "Naucalpan")
+    assert r["area"]["clave"] == "15"
+    assert r["resumen"].startswith("El INEGI no publica")
+    assert "3.07 %" in r["resumen"]

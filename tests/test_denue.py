@@ -59,7 +59,7 @@ async def test_contar_municipio_por_texto():
     r = await c.contar("tortillerías", "Naucalpan")
     assert r["total"] == 515
     assert r["actividad"][0]["codigo"] == "311830"
-    assert r["area"] == {"clave": "15057", "nombre": "Naucalpan de Juárez, México"}
+    assert r["area"] == {"clave": "15057", "nombre": "Naucalpan de Juárez, Estado de México"}
     assert r["otras_actividades_posibles"]
 
 
@@ -73,7 +73,7 @@ async def test_contar_nacional_suma_estados():
     r = await c.contar("311830")
     assert c.rutas == ["Cuantificar/311830/0/0"]
     assert r["total"] == 150
-    assert r["estados_con_mas"][0] == {"estado": "México", "clave": "15", "total": 100}
+    assert r["estados_con_mas"][0] == {"estado": "Estado de México", "clave": "15", "total": 100}
 
 
 async def test_contar_varios_codigos_y_estrato():

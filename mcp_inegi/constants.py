@@ -76,6 +76,15 @@ ESTADOS = {
     "32": "Zacatecas",
 }
 
+# "México" a secas es ambiguo entre el país y el estado: en las frases se usa el nombre común.
+_NOMBRE_COMUN_ESTADO = {"15": "Estado de México"}
+
+
+def nombre_estado(clave: str) -> str:
+    """Nombre de un estado para mostrar ("15" -> "Estado de México", no "México")."""
+    return _NOMBRE_COMUN_ESTADO.get(clave, ESTADOS.get(clave, clave))
+
+
 # Indicadores verificados contra la API (octubre de 2026). Los IDs de 10 dígitos son del
 # BISE (sociodemográfico); los de 6, del BIE (económico).
 INDICADORES = {
@@ -159,7 +168,7 @@ INDICADORES = {
         "banco": BANCO_BIE,
         "nombre": "Tasa de desocupación",
         "tema": "Empleo",
-        "cobertura": "nacional",
+        "cobertura": "nacional (mensual); por estado se calcula con la ENOE (trimestral)",
         "descripcion": "Porcentaje de la población económicamente activa sin empleo, mensual (ENOE).",
     },
     "POBLACION_DESOCUPADA": {

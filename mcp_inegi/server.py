@@ -118,7 +118,7 @@ def create_server(token: str | None = None, denue_token: str | None = None) -> M
 
         async def una(area: str) -> dict:
             try:
-                r = await client.consultar(indicador, area, 1)
+                r = await client.consultar(indicador, area, 1, subir_nivel=False)
             except InegiAPIError as e:
                 return {"area": area, "error": str(e)}
             return {
