@@ -95,6 +95,9 @@ class InegiClient:
     #: Se aceptan IDs y áreas arbitrarias: sin cota, la memoria crecería a voluntad.
     DEFAULT_CACHE_MAX_ENTRIES = 512
 
+    #: Variable de entorno de donde sale el token si no se pasa explícito.
+    TOKEN_ENV = "INEGI_TOKEN"
+
     def __init__(
         self,
         token: str | None = None,
@@ -102,7 +105,7 @@ class InegiClient:
         cache_ttl: float | None = None,
         cache_max_entries: int | None = None,
     ):
-        self.token = token or os.environ.get("INEGI_TOKEN", "")
+        self.token = token or os.environ.get(self.TOKEN_ENV, "")
         self.timeout = timeout
         if cache_ttl is None:
             cache_ttl = float(os.environ.get("INEGI_CACHE_TTL", self.DEFAULT_CACHE_TTL))
@@ -157,14 +160,17 @@ class InegiClient:
             "User-Agent": f"mcp-inegi/{PACKAGE_VERSION} (https://github.com/itzamna-mx/mcp-inegi)",
         }
 
+    def _mensaje_sin_token(self) -> str:
+        return (
+            "No se encontró el token del INEGI. "
+            f"Obtén tu token gratuito en {INEGI_TOKEN_HELP_URL} "
+            "y configúralo en la variable de entorno INEGI_TOKEN."
+        )
+
     async def _get_json(self, ruta: str) -> Any:
         """GET a `{base}/{ruta}/{token}?type=json`, con caché por ruta (sin el token)."""
         if not self.token:
-            raise InegiAPIError(
-                "No se encontró el token del INEGI. "
-                f"Obtén tu token gratuito en {INEGI_TOKEN_HELP_URL} "
-                "y configúralo en la variable de entorno INEGI_TOKEN."
-            )
+            raise InegiAPIError(self._mensaje_sin_token())
 
         en_cache = self._cache_get(ruta)
         if en_cache is not None:

@@ -1,4 +1,4 @@
-"""Servidor MCP para indicadores oficiales del INEGI."""
+"""Servidor MCP para indicadores oficiales y el directorio de negocios (DENUE) del INEGI."""
 
 from __future__ import annotations
 
@@ -10,9 +10,11 @@ try:
 except ImportError:  # pragma: no cover
     from mcp.server.fastmcp import FastMCP as MCPServer
 
+from .actividades import buscar_actividades
 from .areas import buscar_municipios
 from .client import InegiAPIError, InegiClient
 from .constants import ESTADOS, INDICADORES, PACKAGE_VERSION
+from .denue import DenueClient
 
 #: Máximo de áreas por comparación: cada una es una consulta a la API.
 MAX_AREAS = 33
@@ -25,7 +27,7 @@ def _json(datos: object) -> str:
     return json.dumps(datos, ensure_ascii=False, indent=2)
 
 
-def create_server(token: str | None = None) -> MCPServer:
+def create_server(token: str | None = None, denue_token: str | None = None) -> MCPServer:
     """Crea y configura una instancia del servidor MCP para el INEGI."""
     server = MCPServer(
         name="mcp-inegi",
@@ -33,13 +35,17 @@ def create_server(token: str | None = None) -> MCPServer:
         instructions=(
             "Servidor MCP para consultar indicadores oficiales del INEGI (Instituto Nacional "
             "de Estadística y Geografía de México): población, inflación (INPC), empleo, PIB "
-            "e IGAE, a nivel nacional, estatal y, para los datos censales, municipal. "
+            "e IGAE, a nivel nacional, estatal y, para los datos censales, municipal; y el "
+            "DENUE, el directorio de más de 5 millones de negocios (buscar_negocios, "
+            "negocios_cercanos, contar_negocios). "
             "Empieza con indicadores_clave para ver el catálogo y su cobertura geográfica. "
             "Al contestar, cita siempre el periodo, la fuente y el ID del indicador que "
-            "devuelve cada herramienta."
+            "devuelve cada herramienta. En el DENUE, di qué actividad SCIAN se usó: si no es "
+            "la que pidió la persona, revisa otras_actividades_posibles o buscar_actividad."
         ),
     )
     client = InegiClient(token=token)
+    denue = DenueClient(token=denue_token)
 
     @server.tool()
     async def indicadores_clave(tema: str | None = None) -> str:
@@ -167,6 +173,92 @@ def create_server(token: str | None = None) -> MCPServer:
                 "fuente": "INEGI, Marco Geoestadístico (catálogo de municipios)",
             }
         )
+
+    @server.tool()
+    async def buscar_actividad(descripcion: str) -> str:
+        """Busca el código SCIAN de una actividad económica ("tortillerías", "gimnasio").
+
+        El DENUE clasifica cada negocio con un código SCIAN; úsala para elegir el código
+        correcto antes de contar o buscar negocios cuando la palabra es ambigua.
+
+        Args:
+            descripcion: Giro en lenguaje natural, p. ej. 'farmacias', 'taller mecánico'.
+        """
+        candidatos = buscar_actividades(descripcion, limite=10)
+        return _json(
+            {
+                "busqueda": descripcion,
+                "actividades": candidatos,
+                "fuente": "INEGI, SCIAN México 2023",
+            }
+        )
+
+    @server.tool()
+    async def contar_negocios(
+        actividad: str,
+        area: str | None = None,
+        personal: int | None = None,
+    ) -> str:
+        """Cuenta los negocios de un giro en el país, un estado o un municipio (DENUE).
+
+        Args:
+            actividad: Giro en lenguaje natural ('tortillerías', 'farmacias') o código SCIAN
+                de 2 a 6 dígitos; varios códigos separados por comas se suman ('464111,464112').
+            area: País (por defecto), estado o municipio, por nombre o clave ('Naucalpan').
+            personal: Tamaño por personal ocupado (opcional): 1 = 0 a 5, 2 = 6 a 10,
+                3 = 11 a 30, 4 = 31 a 50, 5 = 51 a 100, 6 = 101 a 250, 7 = 251 y más.
+        """
+        try:
+            return _json(await denue.contar(actividad, area, personal))
+        except InegiAPIError as e:
+            return f"Error al contar negocios: {e}"
+
+    @server.tool()
+    async def buscar_negocios(
+        que: str | None = None,
+        area: str | None = None,
+        actividad: str | None = None,
+        personal: int | None = None,
+        limite: int = 20,
+    ) -> str:
+        """Busca negocios por nombre o giro en el país, un estado o un municipio (DENUE).
+
+        Devuelve nombre, giro, tamaño, dirección, teléfono, correo, sitio web y coordenadas.
+
+        Args:
+            que: Texto a buscar en el nombre o la actividad ('Similares', 'tacos'). Opcional si
+                se da actividad.
+            area: País (por defecto), estado o municipio, por nombre o clave.
+            actividad: Filtra por giro ('gimnasio') o código SCIAN de 2, 3, 4 o 6 dígitos.
+            personal: Tamaño por personal ocupado, 1 a 7 (ver contar_negocios).
+            limite: Máximo de negocios a devolver (1 a 50).
+        """
+        try:
+            return _json(await denue.buscar(que, area, actividad, personal, limite))
+        except InegiAPIError as e:
+            return f"Error al buscar negocios: {e}"
+
+    @server.tool()
+    async def negocios_cercanos(
+        latitud: float,
+        longitud: float,
+        que: str | None = None,
+        radio_m: int = 1000,
+        limite: int = 20,
+    ) -> str:
+        """Negocios alrededor de un punto, del más cercano al más lejano (DENUE).
+
+        Args:
+            latitud: Latitud del punto, p. ej. 19.4785.
+            longitud: Longitud del punto, p. ej. -99.2396.
+            que: Nombre o giro a buscar ('cafetería'); vacío trae todos los negocios.
+            radio_m: Radio de búsqueda en metros (máximo 5000).
+            limite: Máximo de negocios a devolver (1 a 50).
+        """
+        try:
+            return _json(await denue.cercanos(que, latitud, longitud, radio_m, limite))
+        except InegiAPIError as e:
+            return f"Error al buscar negocios cercanos: {e}"
 
     @server.tool()
     async def metadatos_indicador(indicador: str) -> str:

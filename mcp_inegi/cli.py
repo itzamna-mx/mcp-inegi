@@ -9,7 +9,8 @@ import sys
 
 from . import __version__
 from .client import InegiAPIError, InegiClient
-from .constants import INEGI_TOKEN_HELP_URL
+from .constants import DENUE_TOKEN_HELP_URL, INEGI_TOKEN_HELP_URL
+from .denue import DenueClient
 from .server import create_server
 
 
@@ -51,8 +52,8 @@ def build_transport_security(allowed_hosts: list[str] | None):
     )
 
 
-def test_connection(token: str | None = None) -> int:
-    """Prueba la conexión a la API del INEGI consultando la inflación anual más reciente."""
+def test_connection(token: str | None = None, denue_token: str | None = None) -> int:
+    """Prueba la API de Indicadores (inflación anual) y, si hay token, la del DENUE."""
     print("=" * 60)
     print(f"mcp-inegi v{__version__} - Verificación de conexión a la API del INEGI")
     print("=" * 60)
@@ -74,9 +75,22 @@ def test_connection(token: str | None = None) -> int:
             res = await client.consultar("INFLACION_ANUAL")
             ultimo = res["ultimo"] or {}
             print(f"-> Éxito: periodo {ultimo.get('periodo')}, inflación anual {ultimo.get('valor')} %")
-            return 0
         except InegiAPIError as e:
             print(f"[ERROR] Falló la consulta al INEGI: {e}")
+            return 1
+
+        denue = DenueClient(token=denue_token)
+        if not denue.token:
+            print("\n[AVISO] Sin DENUE_TOKEN: las herramientas de negocios no van a funcionar.")
+            print(f"Pide un token gratuito (distinto al de Indicadores) en {DENUE_TOKEN_HELP_URL}")
+            return 0
+        print("Consultando el DENUE (tortillerías en el país, SCIAN 311830)...")
+        try:
+            res = await denue.contar("311830")
+            print(f"-> Éxito: {res['total']:,} tortillerías registradas")
+            return 0
+        except InegiAPIError as e:
+            print(f"[ERROR] Falló la consulta al DENUE: {e}")
             return 1
 
     return asyncio.run(_run())
@@ -97,6 +111,12 @@ def main() -> None:
         type=str,
         default=None,
         help="Token de la API de Indicadores del INEGI (o configurar variable INEGI_TOKEN)",
+    )
+    parser.add_argument(
+        "--denue-token",
+        type=str,
+        default=None,
+        help="Token de la API del DENUE, distinto al de Indicadores (o variable DENUE_TOKEN)",
     )
     parser.add_argument(
         "--test",
@@ -137,9 +157,9 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.test:
-        sys.exit(test_connection(args.token))
+        sys.exit(test_connection(args.token, args.denue_token))
 
-    server = create_server(token=args.token)
+    server = create_server(token=args.token, denue_token=args.denue_token)
 
     if args.transport == "stdio":
         server.run(transport="stdio")

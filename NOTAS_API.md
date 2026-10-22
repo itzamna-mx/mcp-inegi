@@ -23,3 +23,13 @@ Los IDs viejos del BIE (444612, 628194, 910392, 735879…) ya no responden.
 - Estados con 2 dígitos ("09"; "9" falla). CL_GEO_AREA/{clave} da el nombre. CL_UNIT_MULT/{n} da Miles/Millones.
 - SOURCE puede venir como lista "2,3,343": CL_SOURCE la acepta y devuelve varias entradas.
 - ¡httpx registra la URL (con token) en INFO! El cliente sube su logger a WARNING.
+
+## DENUE (22 oct 2026)
+- Base: https://www.inegi.org.mx/app/api/denue/v1/consulta/{Metodo}/.../{token}. Formulario de token:
+  inegi.org.mx/app/api/denue/tokenVerify/tokenverify.html (la URL vieja tokenVerify.aspx da 404).
+- La clave de inakisobera8 (7a0af038…) nunca se activó; la de inakisobera77 sí al instante.
+- El token de Indicadores TAMBIÉN funciona en el DENUE (no documentado; no depender de eso).
+- Cuantificar/{SCIAN 2-6 díg, varios con coma}/{área}/{estrato}: área "0" = un renglón por estado
+  (sumar); "00" devuelve 0. BuscarAreaAct usa entidad "00" para todo el país; "todos" es texto literal.
+- Con "Accept: application/json" el JSON llega doblemente codificado (también los errores).
+- Errores con HTTP 200 en texto: "No autorizado…", "No hay resultados…", "Radio máximo 5000 metros".

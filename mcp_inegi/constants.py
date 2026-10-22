@@ -18,6 +18,21 @@ INEGI_TOKEN_HELP_URL = (
     "https://www.inegi.org.mx/app/desarrolladores/generatoken/Usuarios/token_Verify"
 )
 
+# API del DENUE (Directorio Estadístico Nacional de Unidades Económicas). Usa otro token.
+DENUE_API_BASE_URL = "https://www.inegi.org.mx/app/api/denue/v1/consulta"
+DENUE_TOKEN_HELP_URL = "https://www.inegi.org.mx/app/api/denue/tokenVerify/tokenverify.html"
+
+# Estratos de personal ocupado que usa el DENUE (parámetro de Cuantificar y BuscarAreaActEstr).
+ESTRATOS = {
+    "1": "0 a 5 personas",
+    "2": "6 a 10 personas",
+    "3": "11 a 30 personas",
+    "4": "31 a 50 personas",
+    "5": "51 a 100 personas",
+    "6": "101 a 250 personas",
+    "7": "251 y más personas",
+}
+
 # Bancos de información. El BIE (económico) cambió de nombre en la API: "BIE" a secas
 # ya responde "No se encontraron resultados" para todo; hoy es "BIE-BISE".
 BANCO_BISE = "BISE"

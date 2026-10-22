@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcp-inegi"
-version = "0.1.0"
-description = "Servidor MCP para consultar indicadores oficiales del INEGI: población, inflación (INPC), empleo, PIB e IGAE, a nivel nacional, estatal y municipal"
+version = "0.2.0"
+description = "Servidor MCP para datos oficiales del INEGI: indicadores (población, inflación, empleo, PIB, IGAE) y el directorio de negocios DENUE, por país, estado y municipio"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
@@ -25,6 +25,8 @@ keywords = [
     "ai-agents",
     "claude-desktop",
     "itzamna",
+    "denue",
+    "scian",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

@@ -28,6 +28,10 @@ async def test_tools_registradas(server):
         "comparar_areas",
         "metadatos_indicador",
         "buscar_municipio",
+        "buscar_actividad",
+        "contar_negocios",
+        "buscar_negocios",
+        "negocios_cercanos",
     }
 
 
@@ -103,3 +107,13 @@ async def test_consultar_por_nombre_de_municipio(server):
     )
     assert datos["area"]["clave"] == "15057"
     assert datos["ultimo"]["valor"] == 834434
+
+
+async def test_buscar_actividad(server):
+    datos = json.loads(_texto(await server.call_tool("buscar_actividad", {"descripcion": "oxxo"})))
+    assert datos["actividades"][0]["codigo"] == "462112"
+
+
+async def test_contar_negocios_error_legible(server):
+    texto = _texto(await server.call_tool("contar_negocios", {"actividad": "xyzzy"}))
+    assert texto.startswith("Error")
