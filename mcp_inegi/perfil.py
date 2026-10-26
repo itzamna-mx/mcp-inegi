@@ -48,6 +48,28 @@ def _linea(etiqueta: str, r: dict[str, Any]) -> str:
     return f"- {etiqueta}: {valor} ({periodo})"
 
 
+def _suma_por_sexo(datos: dict[str, Any], lineas: list[str]) -> None:
+    """Agrega la población del año más reciente cuando el total viene atrasado.
+
+    En los municipios el INEGI publica mujeres y hombres de 2025 (Intercensal) pero el total
+    solo hasta 2020 (Censo). Sin esto el perfil mezcla años y las cifras no cuadran.
+    """
+    total, m, h = (datos.get(k) for k in ("POBLACION_TOTAL", "POBLACION_MUJERES", "POBLACION_HOMBRES"))
+    if not (total and m and h):
+        return
+    periodos = {d["ultimo"]["periodo"] for d in (m, h)}
+    if len(periodos) != 1 or {d["area"]["clave"] for d in (total, m, h)} != {total["area"]["clave"]}:
+        return
+    periodo = periodos.pop()
+    if str(periodo) <= str(total["ultimo"]["periodo"]):
+        return
+    suma = int(m["ultimo"]["valor"]) + int(h["ultimo"]["valor"])
+    datos["POBLACION_TOTAL_CALCULADA"] = {"periodo": periodo, "valor": suma, "calculo": "mujeres + hombres"}
+    i = next((n for n, x in enumerate(lineas) if x.startswith("- Población total:")), -1)
+    lineas.insert(i + 1, f"- Población total {periodo}: {suma:,} personas (suma de mujeres y hombres; "
+                         "el INEGI aún no publica el total de ese año para este lugar)")
+
+
 async def _negocios(denue: DenueClient, clave: str) -> dict[str, Any] | None:
     """Total de establecimientos y giros principales (sectores SCIAN de 2 dígitos)."""
     if not denue.token:
@@ -100,6 +122,8 @@ async def perfil_area(client: InegiClient, denue: DenueClient, area: str | None)
         nombre_area = nombre_area or (r.get("area_solicitada") or r["area"])["nombre"]
         datos[ind] = {"resumen": r["resumen"], "ultimo": r["ultimo"], "area": r["area"]}
         lineas.append(_linea(etiqueta, r))
+
+    _suma_por_sexo(datos, lineas)
 
     if isinstance(negocios, dict):
         giros = ", ".join(
